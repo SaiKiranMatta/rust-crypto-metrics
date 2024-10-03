@@ -79,6 +79,12 @@ pub struct PoolSwapHistoryRequest {
     pub synth_mint_fees: String,
     pub synth_redeem_fees: String,
     pub total_fees: String,
+    pub to_asset_average_slip: String,
+    pub to_rune_average_slip: String,
+    pub to_trade_average_slip: String,
+    pub from_trade_average_slip: String,
+    pub synth_mint_average_slip: String,
+    pub synth_redeem_average_slip: String,
     pub average_slip: String,
     pub rune_price_usd: String,
 }
