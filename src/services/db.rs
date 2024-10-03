@@ -10,15 +10,13 @@ use mongodb::{
 };
 
 use crate::models::{
-    depth_history_model::PoolDepthPriceHistory, 
-    earnings_model::PoolEarnings, 
-    rpmuh_model::RunePoolHistory, 
-    swap_history_model::PoolSwapHistory
+    depth_history_model::PoolDepthPriceHistory, earning_summary_model::EarningsSummary, earnings_model::PoolEarnings, rpmuh_model::RunePoolHistory, swap_history_model::PoolSwapHistory
 };
 
 pub struct Database {
     depth_history: Collection<PoolDepthPriceHistory>,
     earnings: Collection<PoolEarnings>,
+    earnings_summary: Collection<EarningsSummary>,
     swap_history: Collection<PoolSwapHistory>,
     rpmuh: Collection<RunePoolHistory>,
 }
@@ -36,12 +34,14 @@ impl Database {
 
         let depth_history: Collection<PoolDepthPriceHistory> = db.collection("depth_history");
         let earnings: Collection<PoolEarnings> = db.collection("earnings");
+        let earnings_summary: Collection<EarningsSummary> = db.collection("earnings_summary");
         let swap_history: Collection<PoolSwapHistory> = db.collection("swap_history");
         let rpmuh: Collection<RunePoolHistory> = db.collection("rpmuh");
 
         Database {
             depth_history,
             earnings,
+            earnings_summary,
             swap_history,
             rpmuh,
         }
@@ -59,7 +59,6 @@ impl Database {
             }
         }
     }
-
 
     pub async fn get_pool_depth_price_history(
         &self,
@@ -104,9 +103,6 @@ impl Database {
     
         Ok(results)
     }
-    
-    
-    
 
     pub async fn create_earnings(
         &self,
@@ -116,6 +112,32 @@ impl Database {
             Ok(result) => Ok(result),
             Err(e) => {
                 eprintln!("Error creating earnings: {:?}", e); 
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn create_pool_earnings(
+        &self,
+        pool_earnings: PoolEarnings
+    ) -> Result<InsertOneResult, mongodb::error::Error> {
+        match self.earnings.insert_one(pool_earnings).await {
+            Ok(result) => Ok(result),
+            Err(e) => {
+                eprintln!("Error creating pool earnings: {:?}", e); 
+                Err(e)
+            }
+        }
+    }
+
+    pub async fn create_earnings_summary(
+        &self,
+        earnings_summary: EarningsSummary
+    ) -> Result<InsertOneResult, mongodb::error::Error> {
+        match self.earnings_summary.insert_one(earnings_summary).await {
+            Ok(result) => Ok(result),
+            Err(e) => {
+                eprintln!("Error creating earnings summary: {:?}", e); 
                 Err(e)
             }
         }
