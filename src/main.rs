@@ -4,12 +4,12 @@ mod routes;
 
 use actix_web::web::Data;
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
-use services::depth_history_fetcher; 
+use routes::depth_route::get_pool_depth_price_history;
 use services::db::Database;
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello World!")
+    HttpResponse::Ok().body("Hello S!")
 }
 
 #[actix_web::main]
@@ -20,7 +20,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(db_data.clone())
             .service(hello)
-
+            .service(get_pool_depth_price_history)
     })
     .bind(("127.0.0.1", 5001))?
     .run()

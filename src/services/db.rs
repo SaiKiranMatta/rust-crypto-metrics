@@ -1,9 +1,10 @@
 use std::{env, str::FromStr, time::SystemTime};
 
 use chrono::Utc;
+use dotenv::dotenv;
 use futures_util::stream::StreamExt;
 use mongodb::{
-    bson::{doc, extjson::de::Error, from_document, oid::ObjectId, DateTime},
+    bson::{doc, extjson::de::Error, from_document, oid::ObjectId, to_document, DateTime, Document, from_bson,},
     results::{InsertOneResult, UpdateResult},
     Client, Collection,
 };
@@ -24,10 +25,11 @@ pub struct Database {
 
 impl Database {
     pub async fn init() -> Self {
-        let uri = match env::var("MONGO_URI") {
-            Ok(v) => v.to_string(),
-            Err(_) => "mongodb://localhost:27017/?directConnection=true".to_string(),
-        };
+        dotenv().ok(); 
+
+        let uri = env::var("MONGO_URI").unwrap_or_else(|_| {
+            "mongodb://localhost:27017/?directConnection=true".to_string()
+        });
 
         let client = Client::with_uri_str(uri).await.unwrap();
         let db = client.database("crypto-metrics");
@@ -57,6 +59,47 @@ impl Database {
             }
         }
     }
+
+
+    pub async fn get_pool_depth_price_history(
+        &self,
+        interval: Option<String>, 
+        count: Option<u32>,       
+        from: Option<i64>,        
+        to: Option<i64>,          
+    ) -> Result<Vec<Document>, mongodb::error::Error> {
+        let mut query = doc! {};
+        if let Some(from_timestamp) = from {
+            query.insert("start_time", doc! { "$gte": DateTime::from_millis(from_timestamp * 1000) });
+        }
+    
+        if let Some(to_timestamp) = to {
+            query.insert("end_time", doc! { "$lte": DateTime::from_millis(to_timestamp * 1000) });
+        }
+    
+        let mut cursor = self.depth_history.find(query).await?;
+    
+        let mut results = Vec::new();
+        while let Some(result) = cursor.next().await {
+            match result {
+                Ok(doc) => {
+                    let mut doc = to_document(&doc).unwrap();
+                    doc.remove("_id");
+                    results.push(doc);
+                },
+                Err(e) => eprintln!("Error parsing document: {:?}", e),
+            }
+            if let Some(c) = count {
+                if results.len() as u32 >= c {
+                    break;
+                }
+            }
+        }
+    
+        Ok(results)
+    }
+    
+    
 
     pub async fn create_earnings(
         &self,
