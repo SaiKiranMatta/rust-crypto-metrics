@@ -63,12 +63,17 @@ impl Database {
 
     pub async fn get_pool_depth_price_history(
         &self,
-        interval: Option<String>, 
+        pool: Option<String>,  
         count: Option<u32>,       
         from: Option<i64>,        
         to: Option<i64>,          
-    ) -> Result<Vec<Document>, mongodb::error::Error> {
+    ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
         let mut query = doc! {};
+        
+        if let Some(pool_value) = pool {
+            query.insert("pool", pool_value);
+        }
+    
         if let Some(from_timestamp) = from {
             query.insert("start_time", doc! { "$gte": DateTime::from_millis(from_timestamp * 1000) });
         }
@@ -82,9 +87,10 @@ impl Database {
         let mut results = Vec::new();
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(doc) => {
+                Ok(mut doc) => {
                     let mut doc = to_document(&doc).unwrap();
                     doc.remove("_id");
+                    doc.remove("pool");
                     results.push(doc);
                 },
                 Err(e) => eprintln!("Error parsing document: {:?}", e),
@@ -98,6 +104,7 @@ impl Database {
     
         Ok(results)
     }
+    
     
     
 
