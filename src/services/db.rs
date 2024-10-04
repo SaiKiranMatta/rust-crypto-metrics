@@ -4,9 +4,7 @@ use chrono::Utc;
 use dotenv::dotenv;
 use futures_util::stream::StreamExt;
 use mongodb::{
-    bson::{doc, extjson::de::Error, from_document, oid::ObjectId, to_document, DateTime, Document, from_bson,},
-    results::{InsertOneResult, UpdateResult},
-    Client, Collection,
+    bson::{doc, extjson::de::Error, from_bson, from_document, oid::ObjectId, to_document, DateTime, Document}, options::FindOptions, results::{InsertOneResult, UpdateResult}, Client, Collection
 };
 
 use crate::models::{
@@ -62,47 +60,58 @@ impl Database {
 
     pub async fn get_pool_depth_price_history(
         &self,
-        pool: Option<String>,  
-        count: Option<u32>,       
-        from: Option<i64>,        
-        to: Option<i64>,          
+        start_time: Option<i64>,
+        end_time: Option<i64>,
+        pool: Option<String>,
+        page: u32,
+        limit: u32,
+        sort_by: Option<String>,
+        sort_order: i32,
     ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
         let mut query = doc! {};
-        
+    
         if let Some(pool_value) = pool {
             query.insert("pool", pool_value);
         }
     
-        if let Some(from_timestamp) = from {
-            query.insert("start_time", doc! { "$gte": DateTime::from_millis(from_timestamp * 1000) });
+        if let Some(from_timestamp) = start_time {
+            query.insert("start_time", doc! { "$gte": from_timestamp });
         }
     
-        if let Some(to_timestamp) = to {
-            query.insert("end_time", doc! { "$lte": DateTime::from_millis(to_timestamp * 1000) });
+        if let Some(to_timestamp) = end_time {
+            query.insert("end_time", doc! { "$lte": to_timestamp });
         }
     
-        let mut cursor = self.depth_history.find(query).await?;
+        let skip = (page - 1) * limit;
+        
+        let sort_doc = sort_by.map(|field| {
+            let order = if sort_order == 1 { 1 } else { -1 };
+            doc! { field: order }
+        }).unwrap_or_else(|| doc! {});
+    
+        let mut cursor = self.depth_history
+            .find(query)
+            .skip(skip as u64)
+            .limit(limit as i64)
+            .sort(sort_doc)
+            .await?;
     
         let mut results = Vec::new();
+    
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(mut doc) => {
+                Ok(doc) => {
                     let mut doc = to_document(&doc).unwrap();
                     doc.remove("_id");
-                    doc.remove("pool");
                     results.push(doc);
                 },
                 Err(e) => eprintln!("Error parsing document: {:?}", e),
-            }
-            if let Some(c) = count {
-                if results.len() as u32 >= c {
-                    break;
-                }
             }
         }
     
         Ok(results)
     }
+
 
     pub async fn create_earnings(
         &self,
