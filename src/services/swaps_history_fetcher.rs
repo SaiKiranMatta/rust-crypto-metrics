@@ -154,11 +154,16 @@ pub async fn fetch_and_store_swaps_history(db: &Database, pool: &String, interva
 
     loop {
         let url = format!(
-            "https://midgard.ninerealms.com/v2/history/swaps/{}?interval={}&from={}&count=100",
+            "https://midgard.ninerealms.com/v2/history/swaps?pool={}&interval={}&from={}&count=400",
             pool,
             interval,
             current_time
         );
+
+        let api_response = reqwest::get(&url).await?;
+        let raw_body = api_response.text().await?;
+
+        println!("Raw response: {}", raw_body);
 
         let response = reqwest::get(&url).await?.json::<SwapsApiResponse>().await?;
 

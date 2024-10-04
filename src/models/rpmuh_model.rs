@@ -7,20 +7,16 @@ pub struct RunePoolHistory {
     pub _id: ObjectId,
     pub start_time: String,
     pub end_time: String,
-    pub start_units: String,
-    pub start_count: String,
-    pub end_units: String,
-    pub end_count: String,
+    pub count: String,
+    pub units: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RunePoolHistoryRequest {
-   pub start_time: String,
+    pub start_time: String,
     pub end_time: String,
-    pub start_units: String,
-    pub start_count: String,
-    pub end_units: String,
-    pub end_count: String,
+    pub count: String,
+    pub units: String,
 }
 
 impl TryFrom<RunePoolHistoryRequest> for RunePoolHistory {
@@ -31,10 +27,8 @@ impl TryFrom<RunePoolHistoryRequest> for RunePoolHistory {
             _id: ObjectId::new(),
             start_time: item.start_time,
             end_time: item.end_time,
-            start_units: item.start_units,
-            start_count: item.start_count,
-            end_units: item.end_units,
-            end_count: item.end_count,
+            count: item.count,
+            units: item.units,
         })
     }
 }

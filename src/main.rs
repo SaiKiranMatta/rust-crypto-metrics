@@ -5,7 +5,10 @@ mod routes;
 use actix_web::web::Data;
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use routes::depth_route::get_pool_depth_price_history;
+use routes::depths_scraper::fetch_and_store_depth;
 use routes::earning_scraper:: fetch_and_store_earnings;
+use routes::rune_pool_scraper::fetch_and_store_rune_pool;
+use routes::swaps_scraper::fetch_and_store_swaps;
 use services::db::Database;
 
 #[get("/")]
@@ -23,6 +26,9 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(get_pool_depth_price_history)
             .service(fetch_and_store_earnings)
+            .service(fetch_and_store_swaps)
+            .service(fetch_and_store_depth)
+            .service(fetch_and_store_rune_pool)
     })
     .bind(("127.0.0.1", 5001))?
     .run()

@@ -78,7 +78,7 @@ pub async fn fetch_and_store_depth_history(db: &Database, pool: &String, interva
 
     loop {
         let url = format!(
-            "https://midgard.ninerealms.com/v2/history/depths/{}?interval={}&from={}&count=100",
+            "https://midgard.ninerealms.com/v2/history/depths/{}?interval={}&from={}&count=400",
             pool,
             interval, 
             current_time
