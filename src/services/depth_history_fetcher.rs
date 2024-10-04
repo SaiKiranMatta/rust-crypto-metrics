@@ -50,21 +50,26 @@ struct ApiResponse {
 async fn store_intervals_in_db(intervals: Vec<Interval>, db: &Database) {
     for interval in intervals {
         let new_depth_history = PoolDepthPriceHistory::try_from(PoolDepthPriceHistoryRequest {
-            pool: "BTC.BTC".to_string(),
-            asset_depth: interval.assetDepth,
-            asset_price: interval.assetPrice,
-            asset_price_usd: interval.assetPriceUSD,
-            end_time: interval.endTime,
-            liquidity_units: interval.liquidityUnits,
-            luvi: interval.luvi,
-            members_count: interval.membersCount,
-            rune_depth: interval.runeDepth,
-            start_time: interval.startTime,
-            synth_supply: interval.synthSupply,
-            synth_units: interval.synthUnits,
-            units: interval.units,
+            pool: "BTC.BTC".to_string(), // Assuming this is a valid string
+        
+            asset_depth: interval.assetDepth.parse::<f64>().expect("Failed to parse assetDepth"),
+            asset_price: interval.assetPrice.parse::<f64>().expect("Failed to parse assetPrice"),
+            asset_price_usd: interval.assetPriceUSD.parse::<f64>().expect("Failed to parse assetPriceUSD"),
+            
+            end_time: interval.endTime.parse::<i64>().expect("Failed to parse endTime"),
+            start_time: interval.startTime.parse::<i64>().expect("Failed to parse startTime"),
+            
+            liquidity_units: interval.liquidityUnits.parse::<f64>().expect("Failed to parse liquidityUnits"),
+            luvi: interval.luvi.parse::<f64>().expect("Failed to parse luvi"),
+            members_count: interval.membersCount.parse::<i64>().expect("Failed to parse membersCount"),
+            
+            rune_depth: interval.runeDepth.parse::<f64>().expect("Failed to parse runeDepth"),
+            synth_supply: interval.synthSupply.parse::<f64>().expect("Failed to parse synthSupply"),
+            synth_units: interval.synthUnits.parse::<f64>().expect("Failed to parse synthUnits"),
+            units: interval.units.parse::<f64>().expect("Failed to parse units"),
         })
         .unwrap();
+        
 
         match db.create_depth_history(new_depth_history).await {
             Ok(result) => println!("Successfully inserted: {:?}", result.inserted_id),

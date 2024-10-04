@@ -54,8 +54,8 @@ struct ApiResponse {
 async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Database) {
     for interval in intervals {
         let summary_request = EarningsSummaryRequest {
-            start_time: interval.startTime.clone(),
-            end_time: interval.endTime.clone(),
+            start_time: interval.startTime.clone().parse::<i64>().expect("Failed to parse startTime"),
+            end_time: interval.endTime.clone().parse::<i64>().expect("Failed to parse endTime"),
             avg_node_count: interval.avgNodeCount.clone(),
             block_rewards: interval.blockRewards.clone(),
             bonding_earnings: interval.bondingEarnings.clone(),
@@ -86,19 +86,7 @@ async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Databas
         }
     }
 
-    let meta_summary_request = EarningsSummaryRequest {
-        start_time: meta.startTime.clone(),
-        end_time: meta.endTime.clone(),
-        avg_node_count: meta.avgNodeCount.clone(),
-        block_rewards: meta.blockRewards.clone(),
-        bonding_earnings: meta.bondingEarnings.clone(),
-        liquidity_earnings: meta.liquidityEarnings.clone(),
-        liquidity_fees: meta.liquidityFees.clone(),
-        rune_price_usd: meta.runePriceUSD.clone(),
-    };
-
-    let meta_earnings_summary = EarningsSummary::try_from(meta_summary_request).unwrap();
-    db.create_earnings_summary(meta_earnings_summary).await.unwrap();
+    
 }
 
 pub async fn fetch_and_store_earnings(db: &Database, interval: &String, start_time: i64) -> Result<(), Error> {
@@ -106,7 +94,7 @@ pub async fn fetch_and_store_earnings(db: &Database, interval: &String, start_ti
 
     loop {
         let url = format!(
-            "https://midgard.ninerealms.com/v2/history/earnings?interval={}&from={}&count=300",
+            "https://midgard.ninerealms.com/v2/history/earnings?interval={}&from={}&count=400",
             interval,
             current_time
         );

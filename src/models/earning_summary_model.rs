@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EarningsSummary {
     pub _id: ObjectId,
-    pub start_time: String,         
-    pub end_time: String, 
+    pub start_time: i64,         
+    pub end_time: i64, 
     pub block_rewards: String,           
     pub avg_node_count: String,       
     pub bonding_earnings: String,    
@@ -16,8 +16,8 @@ pub struct EarningsSummary {
 
 #[derive(Debug, Deserialize)]
 pub struct EarningsSummaryRequest {
-    pub start_time: String,
-    pub end_time: String,
+    pub start_time: i64,
+    pub end_time: i64,
     pub avg_node_count: String,
     pub block_rewards: String,
     pub bonding_earnings: String,

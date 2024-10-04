@@ -5,18 +5,18 @@ use std::convert::TryFrom;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RunePoolHistory {
     pub _id: ObjectId,
-    pub start_time: String,
-    pub end_time: String,
-    pub count: String,
-    pub units: String,
+    pub start_time: i64,
+    pub end_time: i64,
+    pub count: i64,
+    pub units: i64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RunePoolHistoryRequest {
-    pub start_time: String,
-    pub end_time: String,
-    pub count: String,
-    pub units: String,
+    pub start_time: i64,
+    pub end_time: i64,
+    pub count: i64,
+    pub units: i64,
 }
 
 impl TryFrom<RunePoolHistoryRequest> for RunePoolHistory {

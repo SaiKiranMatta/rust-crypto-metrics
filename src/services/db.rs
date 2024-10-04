@@ -156,6 +156,51 @@ impl Database {
         }
     }
 
+    pub async fn get_pool_swap_history(
+        &self,
+        pool: Option<String>,
+        count: Option<u32>,
+        from: Option<i64>,
+        to: Option<i64>,
+    ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
+        let mut query = doc! {};
+        
+        if let Some(pool_value) = pool {
+            query.insert("pool", pool_value);
+        }
+    
+        if let Some(from_timestamp) = from {
+            query.insert("start_time", doc! { "$gte": DateTime::from_millis(from_timestamp * 1000) });
+        }
+    
+        if let Some(to_timestamp) = to {
+            query.insert("end_time", doc! { "$lte": DateTime::from_millis(to_timestamp * 1000) });
+        }
+    
+        let mut cursor = self.swap_history.find(query).await?;
+    
+        let mut results = Vec::new();
+    
+        while let Some(result) = cursor.next().await {
+            match result {
+                Ok(mut doc) => {
+                    let mut doc = to_document(&doc).unwrap();
+                    doc.remove("_id");
+                    results.push(doc);
+                },
+                Err(e) => eprintln!("Error parsing document: {:?}", e),
+            }
+    
+            if let Some(c) = count {
+                if results.len() as u32 >= c {
+                    break;
+                }
+            }
+        }
+    
+        Ok(results)
+    }
+
     pub async fn create_rpmuh(
         &self,
         rpmuh: RunePoolHistory
