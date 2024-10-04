@@ -71,97 +71,34 @@ impl Database {
     ) -> Result<Vec<Document>, mongodb::error::Error> {
         let mut query = doc! {};
         
+        // Match pool if provided
         if let Some(pool_value) = pool {
             query.insert("pool", pool_value);
         }
     
+        // Match start_time and end_time if provided
         if let Some(from_timestamp) = start_time {
             query.insert("start_time", doc! { "$gte": from_timestamp });
         }
-    
+        
         if let Some(to_timestamp) = end_time {
             query.insert("end_time", doc! { "$lte": to_timestamp });
         }
     
+        // Pagination: skip and limit
         let skip = (page - 1) * limit;
     
+        // Sorting
         let sort_doc = sort_by.map(|field| {
             let order = if sort_order == 1 { 1 } else { -1 };
             doc! { field: order }
-        }).unwrap_or_else(|| doc! {});
+        }).unwrap_or_else(|| doc! { "end_time": -1 });  // Default sort by end_time (descending)
     
-        let aggregate = match interval.as_deref() {
-            Some("day") => Some(86400),
-            Some("week") => Some(604800),
-            Some("month") => Some(2629743),
-            Some("quarter") => Some(7889229),
-            Some("year") => Some(31556926),
-            _ => None,
-        };
+        // Aggregation based on interval
+        let interval_unit = interval.as_deref().unwrap_or("hour");
     
-        if let Some(interval_sec) = aggregate {
-            let pipeline = vec![
-                doc! {
-                    "$match": query
-                },
-                doc! {
-                    "$group": {
-                        "_id": {
-                            "interval": { 
-                                "$dateTrunc": {
-                                    "date": { "$toDate": { "$multiply": ["$start_time", 1000] } },
-                                    "unit": match interval.as_deref() {
-                                        Some("day") => "day",
-                                        Some("week") => "week",
-                                        Some("month") => "month",
-                                        Some("quarter") => "quarter",
-                                        Some("year") => "year",
-                                        _ => "hour",
-                                    }
-                                }
-                            }
-                        },
-                        "start_time": { "$min": "$start_time" },
-                        "end_time": { "$max": "$end_time" },
-                        "asset_depth": { "$avg": "$asset_depth" },
-                        "asset_price": { "$avg": "$asset_price" },
-                        "asset_price_usd": { "$avg": "$asset_price_usd" },
-                        "liquidity_units": { "$sum": "$liquidity_units" },
-                        "luvi": { "$avg": "$luvi" },
-                        "members_count": { "$max": "$members_count" },
-                        "rune_depth": { "$avg": "$rune_depth" },
-                        "synth_supply": { "$max": "$synth_supply" },
-                        "synth_units": { "$sum": "$synth_units" },
-                        "units": { "$sum": "$units" },
-                    }
-                },
-                doc! {
-                    "$sort": sort_doc
-                },
-                doc! {
-                    "$skip": skip as i64
-                },
-                doc! {
-                    "$limit": limit as i64
-                }
-            ];
-    
-            let mut cursor = self.depth_history.aggregate(pipeline).await?;
-            let mut results = Vec::new();
-    
-            while let Some(result) = cursor.next().await {
-                match result {
-                    Ok(doc) => {
-                        let mut doc = to_document(&doc).unwrap();
-                        doc.remove("_id");
-                        results.push(doc);
-                    },
-                    Err(e) => eprintln!("Error parsing document: {:?}", e),
-                }
-            }
-    
-            Ok(results)
-        } else {
+        // For 'hour' interval, we do not aggregate, we return the data directly
+        if interval_unit == "hour" {
             let mut cursor = self.depth_history
                 .find(query)
                 .skip(skip as u64)
@@ -182,10 +119,95 @@ impl Database {
                 }
             }
     
-            Ok(results)
+            return Ok(results);
         }
+    
+        // For other intervals: day, week, month, etc.
+        // Calculate the interval duration in seconds
+        let interval_duration = match interval_unit {
+            "day" => 86400,
+            "week" => 604800,
+            "month" => 2629743, // Approximate seconds in a month
+            "quarter" => 7889229, // Approximate seconds in a quarter
+            "year" => 31556926, // Approximate seconds in a year
+            _ => 3600, // Default to hour
+        };
+    
+        // Aggregation pipeline for intervals
+        let pipeline = vec![
+            // Stage 1: Match documents based on query
+            doc! { "$match": query },
+    
+            // Stage 2: Group by interval
+            doc! { "$group": {
+                "_id": {
+                    // Group by truncated time
+                    // Subtracting 1ms to include the last element as well
+                   "interval_start": { 
+                        "$subtract": [ 
+                            { "$add": ["$end_time", 1] }, 
+                            { "$mod": [ 
+                                { "$subtract": ["$end_time", 1] },  
+                                interval_duration 
+                            ] }
+                        ]
+                    }
+                },
+                "last_entry": { "$last": "$$ROOT" }  // Keep the last document in the group
+            }},
+            
+            // Stage 3: Project to return relevant fields and adjust start_time and end_time
+            doc! { "$project": {
+                "_id": 0,
+                "pool": "$last_entry.pool",
+                "asset_depth": "$last_entry.asset_depth",
+                "asset_price": "$last_entry.asset_price",
+                "asset_price_usd": "$last_entry.asset_price_usd",
+                "liquidity_units": "$last_entry.liquidity_units",
+                "luvi": "$last_entry.luvi",
+                "members_count": "$last_entry.members_count",
+                "rune_depth": "$last_entry.rune_depth",
+                "synth_supply": "$last_entry.synth_supply",
+                "synth_units": "$last_entry.synth_units",
+                "units": "$last_entry.units",
+                // Adjust start_time and end_time to match the interval boundaries
+                "start_time": {
+                    "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }]
+                },
+                "end_time": {
+                    "$add": [
+                        { "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }] },
+                        interval_duration
+                    ]
+                }
+            }},
+            
+            // Stage 4: Sort the results based on the sort_doc (user-defined or default)
+            doc! { "$sort": sort_doc },
+    
+            // Stage 5: Skip and limit for pagination
+            doc! { "$skip": skip as i64 },
+            doc! { "$limit": limit as i64 },
+        ];
+    
+        // Execute the aggregation
+        let mut cursor = self.depth_history.aggregate(pipeline).await?;
+        let mut results = Vec::new();
+    
+        // Process the cursor and remove _id field from each document
+        while let Some(result) = cursor.next().await {
+            match result {
+                Ok(mut doc) => {
+                    doc.remove("_id");  // Remove the MongoDB _id field
+                    results.push(doc);  // Add the processed document to the result list
+                },
+                Err(e) => eprintln!("Error parsing document: {:?}", e),
+            }
+        }
+    
+        Ok(results)
     }
-
+    
 
     pub async fn create_earnings(
         &self,
