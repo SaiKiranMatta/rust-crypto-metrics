@@ -231,4 +231,54 @@ impl Database {
             }
         }
     }
+    
+    pub async fn get_rune_pool_history(
+        &self,
+        start_time: Option<i64>,
+        end_time: Option<i64>,
+        page: u32,
+        limit: u32,
+        sort_by: Option<String>,
+        sort_order: i32,
+    ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
+        let mut query = doc! {};
+    
+    
+        if let Some(from_timestamp) = start_time {
+            query.insert("start_time", doc! { "$gte": from_timestamp });
+        }
+    
+        if let Some(to_timestamp) = end_time {
+            query.insert("end_time", doc! { "$lte": to_timestamp });
+        }
+    
+        let skip = (page - 1) * limit;
+    
+        let sort_doc = sort_by.map(|field| {
+            let order = if sort_order == 1 { 1 } else { -1 };
+            doc! { field: order }
+        }).unwrap_or_else(|| doc! {});
+    
+        let mut cursor = self.rpmuh
+            .find(query)
+            .skip(skip as u64)
+            .limit(limit as i64)
+            .sort(sort_doc)
+            .await?;
+    
+        let mut results = Vec::new();
+    
+        while let Some(result) = cursor.next().await {
+            match result {
+                Ok(doc) => {
+                    let mut doc = to_document(&doc).unwrap();
+                    doc.remove("_id");
+                    results.push(doc);
+                },
+                Err(e) => eprintln!("Error parsing document: {:?}", e),
+            }
+        }
+    
+        Ok(results)
+    }
 }

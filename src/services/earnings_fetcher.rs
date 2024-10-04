@@ -9,39 +9,39 @@ use super::db::Database;
 #[derive(Debug, Serialize, Deserialize)]
 struct Pool {
     pool: String,
-    assetLiquidityFees: f64,
-    runeLiquidityFees: f64,
-    totalLiquidityFeesRune: f64,
-    saverEarning: f64,
-    rewards: f64,
-    earnings: f64,
+    assetLiquidityFees: String,
+    runeLiquidityFees: String,
+    totalLiquidityFeesRune: String,
+    saverEarning: String,
+    rewards: String,
+    earnings: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Interval {
     startTime: String,
     endTime: String,
-    avgNodeCount: i64,
-    blockRewards: f64,
-    bondingEarnings: f64,
-    earnings: f64,
-    liquidityEarnings: f64,
-    liquidityFees: f64,
-    runePriceUSD: f64,
+    avgNodeCount: String,
+    blockRewards: String,
+    bondingEarnings: String,
+    earnings: String,
+    liquidityEarnings: String,
+    liquidityFees: String,
+    runePriceUSD: String,
     pools: Vec<Pool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Meta {
-    avgNodeCount: i64,
-    blockRewards: f64,
-    bondingEarnings: f64,
-    earnings: f64,
+    avgNodeCount: String,
+    blockRewards: String,
+    bondingEarnings: String,
+    earnings: String,
     endTime: String,
-    liquidityEarnings: f64,
-    liquidityFees: f64,
+    liquidityEarnings: String,
+    liquidityFees: String,
     pools: Vec<Pool>,
-    runePriceUSD: f64,
+    runePriceUSD: String,
     startTime: String,
 }
 
@@ -56,12 +56,12 @@ async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Databas
         let summary_request = EarningsSummaryRequest {
             start_time: interval.startTime.clone().parse::<i64>().expect("Failed to parse startTime"),
             end_time: interval.endTime.clone().parse::<i64>().expect("Failed to parse endTime"),
-            avg_node_count: interval.avgNodeCount,
-            block_rewards: interval.blockRewards,
-            bonding_earnings: interval.bondingEarnings,
-            liquidity_earnings: interval.liquidityEarnings,
-            liquidity_fees: interval.liquidityFees,
-            rune_price_usd: interval.runePriceUSD,
+            avg_node_count: interval.avgNodeCount.clone().parse::<f64>().expect("Failed to parse avgNodeCount"),
+            block_rewards: interval.blockRewards.clone().parse::<f64>().expect("Failed to parse block_rewards"),
+            bonding_earnings: interval.bondingEarnings.clone().parse::<f64>().expect("Failed to parse bonding_earnings"),
+            liquidity_earnings: interval.liquidityEarnings.clone().parse::<f64>().expect("Failed to parse liquidity_earnings"),
+            liquidity_fees: interval.liquidityFees.clone().parse::<f64>().expect("Failed to parseliquidity_fees "),
+            rune_price_usd: interval.runePriceUSD.clone().parse::<f64>().expect("Failed to parse rune_price_usd"),
         };
 
         let earnings_summary = EarningsSummary::try_from(summary_request).unwrap();
@@ -70,11 +70,11 @@ async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Databas
         for pool in interval.pools {
             let pool_request = PoolEarningsRequest {
                 pool: pool.pool.clone(),
-                asset_liquidity_fees: pool.assetLiquidityFees,
-                rune_liquidity_fees: pool.runeLiquidityFees,
-                total_liquidity_fees_rune: pool.totalLiquidityFeesRune,
-                saver_earning: pool.saverEarning,
-                rewards: pool.rewards,
+                asset_liquidity_fees: pool.assetLiquidityFees.clone().parse::<f64>().expect("Failed to parse asset_liquidity_fees"),
+                rune_liquidity_fees: pool.runeLiquidityFees.clone().parse::<f64>().expect("Failed to parse rune_liquidity_fees"),
+                total_liquidity_fees_rune: pool.totalLiquidityFeesRune.clone().parse::<f64>().expect("Failed to parse total_liquidity_fees_rune"),
+                saver_earning: pool.saverEarning.clone().parse::<f64>().expect("Failed to parse saver_earning"),
+                rewards: pool.rewards.clone().parse::<f64>().expect("Failed to parse rewards"),
                 earnings_summary_id: inserted_summary_id.as_object_id().unwrap(),
             };
 
@@ -85,6 +85,8 @@ async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Databas
             }
         }
     }
+
+    
 }
 
 pub async fn fetch_and_store_earnings(db: &Database, interval: &String, start_time: i64) -> Result<(), Error> {
