@@ -15,6 +15,7 @@ pub struct HistoryQueryParams {
     pub limit: Option<u32>,
     pub sort_by: Option<String>,
     pub order: Option<String>,
+    pub interval: Option<String>,
 }
 
 #[get("/depths")]
@@ -39,6 +40,7 @@ pub async fn get_pool_depth_price_history(
             limit,
             query.sort_by.clone(),
             sort_order,
+            query.interval.clone()
         )
         .await
     {

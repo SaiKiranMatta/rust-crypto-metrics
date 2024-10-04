@@ -67,9 +67,10 @@ impl Database {
         limit: u32,
         sort_by: Option<String>,
         sort_order: i32,
-    ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
+        interval: Option<String>,
+    ) -> Result<Vec<Document>, mongodb::error::Error> {
         let mut query = doc! {};
-    
+        
         if let Some(pool_value) = pool {
             query.insert("pool", pool_value);
         }
@@ -83,33 +84,106 @@ impl Database {
         }
     
         let skip = (page - 1) * limit;
-        
+    
         let sort_doc = sort_by.map(|field| {
             let order = if sort_order == 1 { 1 } else { -1 };
             doc! { field: order }
         }).unwrap_or_else(|| doc! {});
     
-        let mut cursor = self.depth_history
-            .find(query)
-            .skip(skip as u64)
-            .limit(limit as i64)
-            .sort(sort_doc)
-            .await?;
+        let aggregate = match interval.as_deref() {
+            Some("day") => Some(86400),
+            Some("week") => Some(604800),
+            Some("month") => Some(2629743),
+            Some("quarter") => Some(7889229),
+            Some("year") => Some(31556926),
+            _ => None,
+        };
     
-        let mut results = Vec::new();
-    
-        while let Some(result) = cursor.next().await {
-            match result {
-                Ok(doc) => {
-                    let mut doc = to_document(&doc).unwrap();
-                    doc.remove("_id");
-                    results.push(doc);
+        if let Some(interval_sec) = aggregate {
+            let pipeline = vec![
+                doc! {
+                    "$match": query
                 },
-                Err(e) => eprintln!("Error parsing document: {:?}", e),
-            }
-        }
+                doc! {
+                    "$group": {
+                        "_id": {
+                            "interval": { 
+                                "$dateTrunc": {
+                                    "date": { "$toDate": { "$multiply": ["$start_time", 1000] } },
+                                    "unit": match interval.as_deref() {
+                                        Some("day") => "day",
+                                        Some("week") => "week",
+                                        Some("month") => "month",
+                                        Some("quarter") => "quarter",
+                                        Some("year") => "year",
+                                        _ => "hour",
+                                    }
+                                }
+                            }
+                        },
+                        "start_time": { "$min": "$start_time" },
+                        "end_time": { "$max": "$end_time" },
+                        "asset_depth": { "$avg": "$asset_depth" },
+                        "asset_price": { "$avg": "$asset_price" },
+                        "asset_price_usd": { "$avg": "$asset_price_usd" },
+                        "liquidity_units": { "$sum": "$liquidity_units" },
+                        "luvi": { "$avg": "$luvi" },
+                        "members_count": { "$max": "$members_count" },
+                        "rune_depth": { "$avg": "$rune_depth" },
+                        "synth_supply": { "$max": "$synth_supply" },
+                        "synth_units": { "$sum": "$synth_units" },
+                        "units": { "$sum": "$units" },
+                    }
+                },
+                doc! {
+                    "$sort": sort_doc
+                },
+                doc! {
+                    "$skip": skip as i64
+                },
+                doc! {
+                    "$limit": limit as i64
+                }
+            ];
     
-        Ok(results)
+            let mut cursor = self.depth_history.aggregate(pipeline).await?;
+            let mut results = Vec::new();
+    
+            while let Some(result) = cursor.next().await {
+                match result {
+                    Ok(doc) => {
+                        let mut doc = to_document(&doc).unwrap();
+                        doc.remove("_id");
+                        results.push(doc);
+                    },
+                    Err(e) => eprintln!("Error parsing document: {:?}", e),
+                }
+            }
+    
+            Ok(results)
+        } else {
+            let mut cursor = self.depth_history
+                .find(query)
+                .skip(skip as u64)
+                .limit(limit as i64)
+                .sort(sort_doc)
+                .await?;
+    
+            let mut results = Vec::new();
+    
+            while let Some(result) = cursor.next().await {
+                match result {
+                    Ok(doc) => {
+                        let mut doc = to_document(&doc).unwrap();
+                        doc.remove("_id");
+                        results.push(doc);
+                    },
+                    Err(e) => eprintln!("Error parsing document: {:?}", e),
+                }
+            }
+    
+            Ok(results)
+        }
     }
 
 

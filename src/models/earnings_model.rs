@@ -10,7 +10,9 @@ pub struct PoolEarnings {
     pub rune_liquidity_fees: f64,          
     pub total_liquidity_fees_rune: f64,    
     pub saver_earning: f64,                 
-    pub rewards: f64,                       
+    pub rewards: f64,
+    pub start_time: i64,               
+    pub end_time: i64,                          
     pub earnings_summary_id: ObjectId,
 }
 
@@ -21,7 +23,9 @@ pub struct PoolEarningsRequest {
     pub rune_liquidity_fees: f64,          
     pub total_liquidity_fees_rune: f64,    
     pub saver_earning: f64,                 
-    pub rewards: f64,                       
+    pub rewards: f64, 
+    pub start_time: i64,               
+    pub end_time: i64,                         
     pub earnings_summary_id: ObjectId,
 }
 
@@ -37,6 +41,8 @@ impl TryFrom<PoolEarningsRequest> for PoolEarnings {
             total_liquidity_fees_rune: item.total_liquidity_fees_rune,
             saver_earning: item.saver_earning,
             rewards: item.rewards,
+            start_time:item.start_time,
+            end_time:item.end_time,
             earnings_summary_id: item.earnings_summary_id,
         })
     }

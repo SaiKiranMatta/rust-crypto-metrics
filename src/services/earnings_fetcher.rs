@@ -75,6 +75,8 @@ async fn store_earnings_in_db(intervals: Vec<Interval>, meta: Meta, db: &Databas
                 total_liquidity_fees_rune: pool.totalLiquidityFeesRune.clone().parse::<f64>().expect("Failed to parse total_liquidity_fees_rune"),
                 saver_earning: pool.saverEarning.clone().parse::<f64>().expect("Failed to parse saver_earning"),
                 rewards: pool.rewards.clone().parse::<f64>().expect("Failed to parse rewards"),
+                start_time:interval.startTime.clone().parse::<i64>().expect("Failed to parse startTime"),
+                end_time: interval.endTime.clone().parse::<i64>().expect("Failed to parse endTime"),
                 earnings_summary_id: inserted_summary_id.as_object_id().unwrap(),
             };
 
