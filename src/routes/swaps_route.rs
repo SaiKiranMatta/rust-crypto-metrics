@@ -8,10 +8,13 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct SwapHistoryQueryParams {
+    pub start_time: Option<i64>,
+    pub end_time: Option<i64>,
     pub pool: Option<String>,
-    pub count: Option<u32>,
-    pub from: Option<i64>,
-    pub to: Option<i64>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
 }
 
 #[get("/swaps")]
@@ -19,18 +22,23 @@ pub async fn get_pool_swap_history(
     db: Data<Database>,
     query: Query<SwapHistoryQueryParams>,
 ) -> HttpResponse {
-    if let Some(count) = query.count {
-        if count < 1 || count > 400 {
-            return HttpResponse::BadRequest().body("Count must be between 1 and 400.");
-        }
-    }
+    let limit = query.limit.unwrap_or(10).clamp(1, 100);
+    let page = query.page.unwrap_or(1).max(1);
+    let sort_order = match query.order.as_deref() {
+        Some("asc") => 1,
+        Some("desc") => -1,
+        _ => 1,
+    };
 
     match db
         .get_pool_swap_history(
+            query.start_time,
+            query.end_time,
             query.pool.clone(),
-            query.count,
-            query.from,
-            query.to,
+            page,
+            limit,
+            query.sort_by.clone(),
+            sort_order,
         )
         .await
     {
