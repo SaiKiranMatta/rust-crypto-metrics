@@ -191,19 +191,6 @@ impl Database {
     }
     
 
-    pub async fn create_earnings(
-        &self,
-        earnings: PoolEarnings
-    ) -> Result<InsertOneResult, mongodb::error::Error> {
-        match self.earnings.insert_one(earnings).await {
-            Ok(result) => Ok(result),
-            Err(e) => {
-                eprintln!("Error creating earnings: {:?}", e); 
-                Err(e)
-            }
-        }
-    }
-
     pub async fn create_pool_earnings(
         &self,
         pool_earnings: PoolEarnings
@@ -229,6 +216,188 @@ impl Database {
             }
         }
     }
+
+
+
+    pub async fn get_pool_earnings(
+        &self,
+        start_time: Option<i64>,
+        end_time: Option<i64>,
+        pool: Option<String>,
+        page: u32,
+        limit: u32,
+        sort_by: Option<String>,
+        sort_order: i32,
+        interval: Option<String>, 
+        include_summary: bool,
+    ) -> Result<Vec<Document>, mongodb::error::Error> {
+        let mut query = doc! {};
+    
+        if let Some(pool_value) = pool {
+            query.insert("pool", pool_value);
+        }
+    
+        if let Some(from_timestamp) = start_time {
+            query.insert("start_time", doc! { "$gte": from_timestamp });
+        }
+    
+        if let Some(to_timestamp) = end_time {
+            query.insert("end_time", doc! { "$lte": to_timestamp });
+        }
+    
+        let skip = (page - 1) * limit;
+    
+        let sort_doc = sort_by.map(|field| {
+            let order = if sort_order == 1 { 1 } else { -1 };
+            doc! { field: order }
+        }).unwrap_or_else(|| doc! { "end_time": -1 });
+    
+       
+        let interval_unit = interval.as_deref().unwrap_or("hour");
+    
+        
+        if interval_unit == "hour" {
+            let mut cursor = self.earnings
+                .find(query)
+                .skip(skip as u64)
+                .limit(limit as i64)
+                .sort(sort_doc)
+                .await?;
+    
+            let mut results = Vec::new();
+    
+            while let Some(result) = cursor.next().await {
+                match result {
+                    Ok( doc) => {
+                        let mut doc = to_document(&doc).unwrap();
+                        doc.remove("_id");
+    
+                        if include_summary {
+                            if let Some(earnings_summary_id) = doc.get_object_id("earnings_summary_id").ok() {
+                                if let Ok(Some(summary_doc)) = self.get_earnings_summary(earnings_summary_id).await {
+                                    for (key, value) in summary_doc.iter() {
+                                        doc.insert(key.clone(), value.clone());
+                                    }
+                                }
+                            }
+                        }
+                        doc.remove("earnings_summary_id");
+                        results.push(doc);
+                    },
+                    Err(e) => eprintln!("Error parsing document: {:?}", e),
+                }
+            }
+    
+            return Ok(results);
+        }
+    
+        let interval_duration = match interval_unit {
+            "day" => 86400,
+            "week" => 604800,
+            "month" => 2678400, 
+            "quarter" => 7948800, 
+            "year" => 31622400,  
+            _ => 3600, 
+        };
+    
+
+        let mut pipeline = vec![
+            doc! { "$match": query },
+    
+            doc! { "$group": {
+                "_id": {
+                    "interval_start": { 
+                        "$subtract": [ 
+                            { "$add": ["$end_time", 1] }, 
+                            { "$mod": [ 
+                                { "$subtract": ["$end_time", 1] },  
+                                interval_duration 
+                            ] }
+                        ]
+                    }
+                },
+                "last_entry": { "$last": "$$ROOT" }  
+            }},
+            
+            doc! { "$project": {
+                "_id": 0,
+                "pool": "$last_entry.pool",
+                "asset_liquidity_fees": "$last_entry.asset_liquidity_fees",
+                "rune_liquidity_fees": "$last_entry.rune_liquidity_fees",
+                "total_liquidity_fees_rune": "$last_entry.total_liquidity_fees_rune",
+                "saver_earning": "$last_entry.saver_earning",
+                "rewards": "$last_entry.rewards",
+                "earnings_summary_id": "$last_entry.earnings_summary_id",
+                "start_time": {
+                    "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }]
+                },
+                "end_time": {
+                    "$add": [
+                        { "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }] },
+                        interval_duration
+                    ]
+                }
+            }},
+            
+            doc! { "$sort": sort_doc },
+    
+            doc! { "$skip": skip as i64 },
+            doc! { "$limit": limit as i64 },
+        ];
+    
+
+    
+        let mut cursor = self.earnings.aggregate(pipeline).await?;
+        let mut results = Vec::new();
+    
+        while let Some(result) = cursor.next().await {
+            match result {
+                Ok( doc) => {
+                    let mut doc = to_document(&doc).unwrap();
+                    doc.remove("_id");
+
+                    if include_summary {
+                        if let Some(earnings_summary_id) = doc.get_object_id("earnings_summary_id").ok() {
+                            if let Ok(Some(summary_doc)) = self.get_earnings_summary(earnings_summary_id).await {
+                                for (key, value) in summary_doc.iter() {
+                                    doc.insert(key.clone(), value.clone());
+                                }
+                            }
+                        }
+                    }
+                    doc.remove("earnings_summary_id");
+                    results.push(doc);
+                },
+                Err(e) => eprintln!("Error parsing document: {:?}", e),
+            }
+        }
+    
+        Ok(results)
+    }
+    
+    pub async fn get_earnings_summary(
+        &self,
+        earnings_summary_id: ObjectId,
+    ) -> Result<Option<Document>, mongodb::error::Error> {
+        let filter = doc! { "_id": earnings_summary_id };
+    
+        match self.earnings_summary.find_one(filter).await {
+            Ok(Some(summary_doc)) => {
+                let mut summary = to_document(&summary_doc).unwrap();
+                summary.remove("_id"); 
+                summary.remove("start_time");
+                summary.remove("end_time");
+                Ok(Some(summary))
+            }
+            Ok(None) => {
+                Ok(None)
+            }
+            Err(err) => {
+                Err(err)
+            }
+        }
+    }
+
 
     pub async fn create_swap_history(
         &self,

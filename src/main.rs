@@ -9,6 +9,7 @@ use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use routes::depth_route::get_pool_depth_price_history;
 use routes::depths_scraper::fetch_and_store_depth;
 use routes::earning_scraper:: fetch_and_store_earnings;
+use routes::earnings_route::get_pool_earnings_api;
 use routes::rpmuh_route::get_rune_pool_history;
 use routes::rune_pool_scraper::fetch_and_store_rune_pool;
 use routes::swaps_route::get_pool_swap_history;
@@ -31,6 +32,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_pool_depth_price_history)
             .service(get_pool_swap_history)
             .service(get_rune_pool_history)
+            .service(get_pool_earnings_api)
             .service(fetch_and_store_earnings)
             .service(fetch_and_store_swaps)
             .service(fetch_and_store_depth)

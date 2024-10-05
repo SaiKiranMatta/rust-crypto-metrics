@@ -5,3 +5,4 @@ pub mod depths_scraper;
 pub mod rune_pool_scraper;
 pub mod swaps_route;
 pub mod rpmuh_route;
+pub mod earnings_route;
