@@ -1,10 +1,10 @@
-use std::{env, str::FromStr, time::SystemTime};
+use std::env;
 
-use chrono::Utc;
+
 use dotenv::dotenv;
 use futures_util::stream::StreamExt;
 use mongodb::{
-    bson::{doc, extjson::de::Error, from_bson, from_document, oid::ObjectId, to_document, DateTime, Document}, options::FindOptions, results::{InsertOneResult, UpdateResult}, Client, Collection
+    bson::{doc, oid::ObjectId, to_document,  Document}, results::InsertOneResult, Client, Collection
 };
 
 use crate::models::{
@@ -300,8 +300,8 @@ impl Database {
             _ => 3600, 
         };
     
-
-        let mut pipeline = vec![
+        
+        let pipeline = vec![
             doc! { "$match": query },
     
             doc! { "$group": {
