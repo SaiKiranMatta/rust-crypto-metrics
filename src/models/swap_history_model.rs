@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PoolSwapHistory {
     pub _id: ObjectId,
-    pub pool: String, // e.g., "BTC.BTC", "ETH.ETH"
+    pub pool: String, 
     pub start_time: i64,
     pub end_time: i64,
     pub to_asset_count: i64,

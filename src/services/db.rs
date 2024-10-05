@@ -71,12 +71,10 @@ impl Database {
     ) -> Result<Vec<Document>, mongodb::error::Error> {
         let mut query = doc! {};
         
-        // Match pool if provided
         if let Some(pool_value) = pool {
             query.insert("pool", pool_value);
         }
     
-        // Match start_time and end_time if provided
         if let Some(from_timestamp) = start_time {
             query.insert("start_time", doc! { "$gte": from_timestamp });
         }
@@ -85,19 +83,15 @@ impl Database {
             query.insert("end_time", doc! { "$lte": to_timestamp });
         }
     
-        // Pagination: skip and limit
         let skip = (page - 1) * limit;
     
-        // Sorting
         let sort_doc = sort_by.map(|field| {
             let order = if sort_order == 1 { 1 } else { -1 };
             doc! { field: order }
-        }).unwrap_or_else(|| doc! { "end_time": -1 });  // Default sort by end_time (descending)
+        }).unwrap_or_else(|| doc! { "end_time": -1 });  
     
-        // Aggregation based on interval
         let interval_unit = interval.as_deref().unwrap_or("hour");
     
-        // For 'hour' interval, we do not aggregate, we return the data directly
         if interval_unit == "hour" {
             let mut cursor = self.depth_history
                 .find(query)
@@ -122,26 +116,20 @@ impl Database {
             return Ok(results);
         }
     
-        // For other intervals: day, week, month, etc.
-        // Calculate the interval duration in seconds
         let interval_duration = match interval_unit {
             "day" => 86400,
             "week" => 604800,
-            "month" => 2629743, // Approximate seconds in a month
-            "quarter" => 7889229, // Approximate seconds in a quarter
-            "year" => 31556926, // Approximate seconds in a year
-            _ => 3600, // Default to hour
+            "month" => 2678400, 
+            "quarter" => 7948800, 
+            "year" => 31622400,  
+            _ => 3600, 
         };
     
-        // Aggregation pipeline for intervals
         let pipeline = vec![
-            // Stage 1: Match documents based on query
             doc! { "$match": query },
     
-            // Stage 2: Group by interval
             doc! { "$group": {
                 "_id": {
-                    // Group by truncated time
                     // Subtracting 1ms to include the last element as well
                    "interval_start": { 
                         "$subtract": [ 
@@ -153,10 +141,9 @@ impl Database {
                         ]
                     }
                 },
-                "last_entry": { "$last": "$$ROOT" }  // Keep the last document in the group
+                "last_entry": { "$last": "$$ROOT" }  
             }},
             
-            // Stage 3: Project to return relevant fields and adjust start_time and end_time
             doc! { "$project": {
                 "_id": 0,
                 "pool": "$last_entry.pool",
@@ -170,7 +157,6 @@ impl Database {
                 "synth_supply": "$last_entry.synth_supply",
                 "synth_units": "$last_entry.synth_units",
                 "units": "$last_entry.units",
-                // Adjust start_time and end_time to match the interval boundaries
                 "start_time": {
                     "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }]
                 },
@@ -182,24 +168,20 @@ impl Database {
                 }
             }},
             
-            // Stage 4: Sort the results based on the sort_doc (user-defined or default)
             doc! { "$sort": sort_doc },
     
-            // Stage 5: Skip and limit for pagination
             doc! { "$skip": skip as i64 },
             doc! { "$limit": limit as i64 },
         ];
     
-        // Execute the aggregation
         let mut cursor = self.depth_history.aggregate(pipeline).await?;
         let mut results = Vec::new();
     
-        // Process the cursor and remove _id field from each document
         while let Some(result) = cursor.next().await {
             match result {
                 Ok(mut doc) => {
-                    doc.remove("_id");  // Remove the MongoDB _id field
-                    results.push(doc);  // Add the processed document to the result list
+                    doc.remove("_id");  
+                    results.push(doc);  
                 },
                 Err(e) => eprintln!("Error parsing document: {:?}", e),
             }
@@ -270,6 +252,7 @@ impl Database {
         limit: u32,
         sort_by: Option<String>,
         sort_order: i32,
+        interval: Option<String>,
     ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
         let mut query = doc! {};
     
@@ -292,19 +275,121 @@ impl Database {
             doc! { field: order }
         }).unwrap_or_else(|| doc! {});
     
-        let mut cursor = self.swap_history
-            .find(query)
-            .skip(skip as u64)
-            .limit(limit as i64)
-            .sort(sort_doc)
-            .await?;
+        let interval_unit = interval.as_deref().unwrap_or("hour");
     
+        if interval_unit == "hour" {
+            let mut cursor = self.swap_history
+                .find(query)
+                .skip(skip as u64)
+                .limit(limit as i64)
+                .sort(sort_doc)
+                .await?;
+    
+            let mut results = Vec::new();
+    
+            while let Some(result) = cursor.next().await {
+                match result {
+                    Ok(doc) => {
+                        let mut doc = to_document(&doc).unwrap();
+                        doc.remove("_id");
+                        results.push(doc);
+                    },
+                    Err(e) => eprintln!("Error parsing document: {:?}", e),
+                }
+            }
+    
+            return Ok(results);
+        }
+    
+        let interval_duration = match interval_unit {
+            "day" => 86400,
+            "week" => 604800,
+            "month" => 2678400,
+            "quarter" => 7948800,
+            "year" => 31622400,
+            _ => 3600,
+        };
+    
+        let pipeline = vec![
+            doc! { "$match": query },
+    
+            doc! { "$group": {
+                "_id": {
+                    "interval_start": { 
+                        "$subtract": [ 
+                            { "$add": ["$end_time", 1] }, 
+                            { "$mod": [ 
+                                { "$subtract": ["$end_time", 1] },  
+                                interval_duration 
+                            ] }
+                        ]
+                    }
+                },
+                "last_entry": { "$last": "$$ROOT" }  
+            }},
+            
+            doc! { "$project": {
+                "_id": "$last_entry._id",
+                "pool": "$last_entry.pool",
+                "start_time": {
+                    "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }]
+                },
+                "end_time": {
+                    "$add": [
+                        { "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }] },
+                        interval_duration
+                    ]
+                },
+                "to_asset_count": "$last_entry.to_asset_count",
+                "to_rune_count": "$last_entry.to_rune_count",
+                "to_trade_count": "$last_entry.to_trade_count",
+                "from_trade_count": "$last_entry.from_trade_count",
+                "synth_mint_count": "$last_entry.synth_mint_count",
+                "synth_redeem_count": "$last_entry.synth_redeem_count",
+                "total_count": "$last_entry.total_count",
+                "to_asset_volume": "$last_entry.to_asset_volume",
+                "to_rune_volume": "$last_entry.to_rune_volume",
+                "to_trade_volume": "$last_entry.to_trade_volume",
+                "from_trade_volume": "$last_entry.from_trade_volume",
+                "synth_mint_volume": "$last_entry.synth_mint_volume",
+                "synth_redeem_volume": "$last_entry.synth_redeem_volume",
+                "total_volume": "$last_entry.total_volume",
+                "to_asset_volume_usd": "$last_entry.to_asset_volume_usd",
+                "to_rune_volume_usd": "$last_entry.to_rune_volume_usd",
+                "to_trade_volume_usd": "$last_entry.to_trade_volume_usd",
+                "from_trade_volume_usd": "$last_entry.from_trade_volume_usd",
+                "synth_mint_volume_usd": "$last_entry.synth_mint_volume_usd",
+                "synth_redeem_volume_usd": "$last_entry.synth_redeem_volume_usd",
+                "total_volume_usd": "$last_entry.total_volume_usd",
+                "to_asset_fees": "$last_entry.to_asset_fees",
+                "to_rune_fees": "$last_entry.to_rune_fees",
+                "to_trade_fees": "$last_entry.to_trade_fees",
+                "from_trade_fees": "$last_entry.from_trade_fees",
+                "synth_mint_fees": "$last_entry.synth_mint_fees",
+                "synth_redeem_fees": "$last_entry.synth_redeem_fees",
+                "total_fees": "$last_entry.total_fees",
+                "to_asset_average_slip": "$last_entry.to_asset_average_slip",
+                "to_rune_average_slip": "$last_entry.to_rune_average_slip",
+                "to_trade_average_slip": "$last_entry.to_trade_average_slip",
+                "from_trade_average_slip": "$last_entry.from_trade_average_slip",
+                "synth_mint_average_slip": "$last_entry.synth_mint_average_slip",
+                "synth_redeem_average_slip": "$last_entry.synth_redeem_average_slip",
+                "average_slip": "$last_entry.average_slip",
+                "rune_price_usd": "$last_entry.rune_price_usd"
+            }},
+            
+            doc! { "$sort": sort_doc },
+    
+            doc! { "$skip": skip as i64 },
+            doc! { "$limit": limit as i64 },
+        ];
+    
+        let mut cursor = self.swap_history.aggregate(pipeline).await?;
         let mut results = Vec::new();
     
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(doc) => {
-                    let mut doc = to_document(&doc).unwrap();
+                Ok(mut doc) => {
                     doc.remove("_id");
                     results.push(doc);
                 },
@@ -314,6 +399,7 @@ impl Database {
     
         Ok(results)
     }
+    
 
     pub async fn create_rpmuh(
         &self,
@@ -336,9 +422,9 @@ impl Database {
         limit: u32,
         sort_by: Option<String>,
         sort_order: i32,
+        interval: Option<String>,
     ) -> Result<Vec<mongodb::bson::Document>, mongodb::error::Error> {
         let mut query = doc! {};
-    
     
         if let Some(from_timestamp) = start_time {
             query.insert("start_time", doc! { "$gte": from_timestamp });
@@ -355,19 +441,85 @@ impl Database {
             doc! { field: order }
         }).unwrap_or_else(|| doc! {});
     
-        let mut cursor = self.rpmuh
-            .find(query)
-            .skip(skip as u64)
-            .limit(limit as i64)
-            .sort(sort_doc)
-            .await?;
+        let interval_unit = interval.as_deref().unwrap_or("hour");
     
+        if interval_unit == "hour" {
+            let mut cursor = self.rpmuh
+                .find(query)
+                .skip(skip as u64)
+                .limit(limit as i64)
+                .sort(sort_doc)
+                .await?;
+    
+            let mut results = Vec::new();
+    
+            while let Some(result) = cursor.next().await {
+                match result {
+                    Ok(doc) => {
+                        let mut doc = to_document(&doc).unwrap();
+                        doc.remove("_id");
+                        results.push(doc);
+                    },
+                    Err(e) => eprintln!("Error parsing document: {:?}", e),
+                }
+            }
+    
+            return Ok(results);
+        }
+    
+        let interval_duration = match interval_unit {
+            "day" => 86400,
+            "week" => 604800,
+            "month" => 2678400, 
+            "quarter" => 7948800, 
+            "year" => 31622400, 
+            _ => 3600,
+        };
+    
+        let pipeline = vec![
+            doc! { "$match": query },
+    
+            doc! { "$group": {
+                "_id": {
+                    "interval_start": { 
+                        "$subtract": [ 
+                            { "$add": ["$end_time", 1] }, 
+                            { "$mod": [ 
+                                { "$subtract": ["$end_time", 1] },  
+                                interval_duration 
+                            ] }
+                        ]
+                    }
+                },
+                "last_entry": { "$last": "$$ROOT" }  
+            }},
+            
+            doc! { "$project": {
+                "start_time": {
+                    "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }]
+                },
+                "end_time": {
+                    "$add": [
+                        { "$subtract": [ "$last_entry.start_time", { "$mod": [ "$last_entry.start_time", interval_duration ] }] },
+                        interval_duration
+                    ]
+                },
+                "count": "$last_entry.count",
+                "units": "$last_entry.units"
+            }},
+            
+            doc! { "$sort": sort_doc },
+    
+            doc! { "$skip": skip as i64 },
+            doc! { "$limit": limit as i64 },
+        ];
+    
+        let mut cursor = self.rpmuh.aggregate(pipeline).await?;
         let mut results = Vec::new();
     
         while let Some(result) = cursor.next().await {
             match result {
-                Ok(doc) => {
-                    let mut doc = to_document(&doc).unwrap();
+                Ok(mut doc) => {
                     doc.remove("_id");
                     results.push(doc);
                 },
@@ -377,4 +529,5 @@ impl Database {
     
         Ok(results)
     }
+    
 }

@@ -1,3 +1,5 @@
+#![recursion_limit = "512"]
+
 mod services;
 mod models;
 mod routes;

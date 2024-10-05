@@ -14,6 +14,7 @@ pub struct RunePoolHistoryQueryParams {
     pub limit: Option<u32>,
     pub sort_by: Option<String>,
     pub order: Option<String>,
+    pub interval: Option<String>,
 }
 
 #[get("/rune_pool_history")]
@@ -37,6 +38,7 @@ pub async fn get_rune_pool_history(
             limit,
             query.sort_by.clone(),
             sort_order,
+            query.interval.clone()
         )
         .await
     {
