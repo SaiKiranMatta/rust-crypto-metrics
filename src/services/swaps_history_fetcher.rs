@@ -97,10 +97,10 @@ struct SwapsApiResponse {
     intervals: Vec<SwapsInterval>,
 }
 
-async fn store_swaps_intervals_in_db(intervals: Vec<SwapsInterval>, db: &Database) {
+async fn store_swaps_intervals_in_db(intervals: Vec<SwapsInterval>, pool: &String, db: &Database) {
     for interval in intervals {
         let new_swap_history = PoolSwapHistory::try_from(PoolSwapHistoryRequest {
-            pool: "BTC.BTC".to_string(), // Assuming the pool is always a valid string
+            pool: pool.to_string(),
             start_time: interval.startTime.parse::<i64>().expect("Failed to parse startTime"),
             end_time: interval.endTime.parse::<i64>().expect("Failed to parse endTime"),
             
@@ -175,7 +175,7 @@ pub async fn fetch_and_store_swaps_history(db: &Database, pool: &String, interva
 
         let response = reqwest::get(&url).await?.json::<SwapsApiResponse>().await?;
 
-        store_swaps_intervals_in_db(response.intervals, db).await;
+        store_swaps_intervals_in_db(response.intervals, &pool, db).await;
         let end_time: i64 = response.meta.endTime.parse().unwrap();
 
         let current_utc: DateTime<Utc> = Utc::now();
