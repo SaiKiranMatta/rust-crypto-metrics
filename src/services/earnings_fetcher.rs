@@ -1,7 +1,7 @@
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use mongodb::bson::oid::ObjectId;
+
 
 use crate::models::{earning_summary_model::{EarningsSummary, EarningsSummaryRequest}, earnings_model::{PoolEarnings, PoolEarningsRequest}};
 use super::db::Database;

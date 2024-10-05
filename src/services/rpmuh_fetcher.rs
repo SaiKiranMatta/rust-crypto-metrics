@@ -1,6 +1,5 @@
 use reqwest::Error;
 use serde::{Deserialize, Serialize};
-use mongodb::bson::oid::ObjectId;
 use crate::models::rpmuh_model::{RunePoolHistory, RunePoolHistoryRequest};
 use super::db::Database;
 use chrono::{DateTime, Utc};
