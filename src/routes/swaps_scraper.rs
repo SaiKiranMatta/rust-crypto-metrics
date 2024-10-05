@@ -10,7 +10,7 @@ use serde::Deserialize;
 pub struct FetchSwapsParams {
     pub interval: String,
     pub start_time: i64,
-    pub pool: String,  // Added to specify the pool for fetching swap history
+    pub pool: String,  
 }
 
 #[post("/swaps_scraper")]

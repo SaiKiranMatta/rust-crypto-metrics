@@ -8,8 +8,8 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct FetchRunePoolParams {
-    pub interval: String, // Interval for fetching data
-    pub from: i64,       // From timestamp
+    pub interval: String, 
+    pub from: i64,      
 }
 
 #[post("/rune_pool_scraper")]

@@ -8,9 +8,9 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct FetchDepthParams {
-    pub pool: String,        // Pool identifier (e.g., "BTC.BTC")
-    pub interval: String,    // Interval for fetching data (e.g., "1h")
-    pub start_time: i64,     // Start time for fetching data in Unix timestamp
+    pub pool: String,        
+    pub interval: String,    
+    pub start_time: i64,     
 }
 
 #[post("/depths_scraper")]

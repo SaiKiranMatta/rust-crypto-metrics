@@ -47,10 +47,10 @@ struct ApiResponse {
     intervals: Vec<Interval>,
 }
 
-async fn store_intervals_in_db(intervals: Vec<Interval>, db: &Database) {
+async fn store_intervals_in_db(intervals: Vec<Interval>, pool: &String, db: &Database) {
     for interval in intervals {
         let new_depth_history = PoolDepthPriceHistory::try_from(PoolDepthPriceHistoryRequest {
-            pool: "BTC.BTC".to_string(), // Assuming this is a valid string
+            pool: pool.to_string(), 
         
             asset_depth: interval.assetDepth.parse::<f64>().expect("Failed to parse assetDepth"),
             asset_price: interval.assetPrice.parse::<f64>().expect("Failed to parse assetPrice"),
@@ -91,7 +91,7 @@ pub async fn fetch_and_store_depth_history(db: &Database, pool: &String, interva
 
         let response = reqwest::get(&url).await?.json::<ApiResponse>().await?;
 
-        store_intervals_in_db(response.intervals, db).await;
+        store_intervals_in_db(response.intervals, &pool, db).await;
         let end_time: i64 = response.meta.endTime.parse().unwrap();
 
 

@@ -16,7 +16,7 @@ pub struct EarningsQueryParams {
     pub sort_by: Option<String>,
     pub order: Option<String>,
     pub interval: Option<String>,
-    pub summary: Option<bool>, // Optional summary parameter
+    pub summary: Option<bool>, 
 }
 
 #[get("/earnings")]
