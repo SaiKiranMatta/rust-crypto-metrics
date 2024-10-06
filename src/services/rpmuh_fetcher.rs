@@ -28,7 +28,7 @@ struct RunePoolHistoryApiResponse {
     pub intervals: Vec<RunePoolInterval>,
 }
 
-pub async fn fetch_and_store_rune_pool_history(db: &Database, interval: &str, mut from: i64) -> Result<(), Error> {
+pub async fn fetch_and_store_rune_pool_history(db: &Database, interval: &String, mut from: i64) -> Result<(), Error> {
     loop {
         let url = format!(
             "https://midgard.ninerealms.com/v2/history/runepool/?interval={}&from={}&count=400",

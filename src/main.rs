@@ -12,6 +12,7 @@ use routes::earning_scraper:: fetch_and_store_earnings;
 use routes::earnings_route::get_pool_earnings_api;
 use routes::rpmuh_route::get_rune_pool_history;
 use routes::rune_pool_scraper::fetch_and_store_rune_pool;
+use routes::scraper_cron::run_all_jobs;
 use routes::swaps_route::get_pool_swap_history;
 use routes::swaps_scraper::fetch_and_store_swaps;
 use services::db::Database;
@@ -37,6 +38,7 @@ async fn main() -> std::io::Result<()> {
             .service(fetch_and_store_swaps)
             .service(fetch_and_store_depth)
             .service(fetch_and_store_rune_pool)
+            .service(run_all_jobs)
     })
     .bind(("127.0.0.1", 5001))?
     .run()
