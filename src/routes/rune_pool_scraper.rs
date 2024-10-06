@@ -11,7 +11,7 @@ use dotenv::dotenv;
 #[derive(Debug, Deserialize)]
 pub struct FetchRunePoolParams {
     pub interval: String,
-    pub from: i64,
+    pub start_time: i64,
     pub secret: String,
 }
 
@@ -28,7 +28,7 @@ pub async fn fetch_and_store_rune_pool(
         return HttpResponse::Unauthorized().body("Wrong secret key.");
     }
 
-    match services::rpmuh_fetcher::fetch_and_store_rune_pool_history(&db, &params.interval, params.from).await {
+    match services::rpmuh_fetcher::fetch_and_store_rune_pool_history(&db, &params.interval, params.start_time).await {
         Ok(()) => HttpResponse::Ok().body("Rune pool history fetched and stored successfully."),
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
