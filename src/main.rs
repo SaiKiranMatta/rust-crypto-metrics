@@ -3,9 +3,11 @@
 mod services;
 mod models;
 mod routes;
+mod api_doc;
 
 use actix_web::web::Data;
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
+use api_doc::ApiDoc;
 use routes::depth_route::get_pool_depth_price_history;
 use routes::depths_scraper::fetch_and_store_depth;
 use routes::earning_scraper:: fetch_and_store_earnings;
@@ -16,6 +18,8 @@ use routes::scraper_cron::run_all_jobs;
 use routes::swaps_route::get_pool_swap_history;
 use routes::swaps_scraper::fetch_and_store_swaps;
 use services::db::Database;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -39,6 +43,11 @@ async fn main() -> std::io::Result<()> {
             .service(fetch_and_store_depth)
             .service(fetch_and_store_rune_pool)
             .service(run_all_jobs)
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
+
     })
     .bind(("127.0.0.1", 5001))?
     .run()

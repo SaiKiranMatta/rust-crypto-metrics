@@ -6,22 +6,51 @@ use actix_web::{
 };
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct HistoryQueryParams {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct DepthHistoryQueryParams {
+    #[schema(example = 1653373410)]
     pub start_time: Option<i64>,
+    #[schema(example = 1666592610)]
     pub end_time: Option<i64>,
+    #[schema(example = "BTC.BTC")]
     pub pool: Option<String>,
+    #[schema(example = 1, minimum = 1)]
     pub page: Option<u32>,
+    #[schema(example = 10, minimum = 1, maximum = 100)]
     pub limit: Option<u32>,
+    #[schema(example = "asset_price")]
     pub sort_by: Option<String>,
+    #[schema(example = "asc")]
     pub order: Option<String>,
+    #[schema(example = "day")]
     pub interval: Option<String>,
 }
 
+/// Get pool depth price history
+#[utoipa::path(
+    get,
+    path = "/depths",
+    params(
+        ("start_time" = Option<i64>, Query, description = "Start time Unix timestamp"),
+        ("end_time" = Option<i64>, Query, description = "End time Unix timestamp"),
+        ("pool" = Option<String>, Query, description = "Pool identifier"),
+        ("page" = Option<u32>, Query, description = "Page number (minimum: 1)"),
+        ("limit" = Option<u32>, Query, description = "Items per page (1-100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("order" = Option<String>, Query, description = "Sort order (asc or desc)"),
+        ("interval" = Option<String>, Query, description = "Time interval for aggregation (hour, day, week, month, quarter, year)")
+    ),
+    responses(
+        (status = 200, description = "List of pool depth price history", body = Vec<HistoryQueryParams>),
+        (status = 400, description = "Bad request - Invalid parameters"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Depth and Price History"
+)]
 #[get("/depths")]
 pub async fn get_pool_depth_price_history(
     db: Data<Database>,
-    query: Query<HistoryQueryParams>,
+    query: Query<DepthHistoryQueryParams>,
 ) -> HttpResponse {
     if let (Some(start), Some(end)) = (query.start_time, query.end_time) {
         if start >= end {
