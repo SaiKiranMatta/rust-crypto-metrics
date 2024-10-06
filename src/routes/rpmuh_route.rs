@@ -6,17 +6,44 @@ use actix_web::{
 };
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RunePoolHistoryQueryParams {
+    #[schema(example = 1653373410)]
     pub start_time: Option<i64>,
+    #[schema(example = 1666592610)]
     pub end_time: Option<i64>,
+    #[schema(example = 1, minimum = 1)]
     pub page: Option<u32>,
+    #[schema(example = 10, minimum = 1, maximum = 100)]
     pub limit: Option<u32>,
+    #[schema(example = "asset_price")]
     pub sort_by: Option<String>,
+    #[schema(example = "asc")]
     pub order: Option<String>,
+    #[schema(example = "day")]
     pub interval: Option<String>,
 }
 
+/// Get rune pool members and units history
+#[utoipa::path(
+    get,
+    path = "/rune_pool_history",
+    params(
+        ("start_time" = Option<i64>, Query, description = "Start time Unix timestamp"),
+        ("end_time" = Option<i64>, Query, description = "End time Unix timestamp"),
+        ("page" = Option<u32>, Query, description = "Page number (minimum: 1)"),
+        ("limit" = Option<u32>, Query, description = "Items per page (1-100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("order" = Option<String>, Query, description = "Sort order (asc or desc)"),
+        ("interval" = Option<String>, Query, description = "Time interval for aggregation (hour, day, week, month, quarter, year)")
+    ),
+    responses(
+        (status = 200, description = "List of rune pool history", body = Vec<RunePoolHistoryQueryParams>),
+        (status = 400, description = "Bad request - Invalid parameters"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Rune Pool History"
+)]
 #[get("/rune_pool_history")]
 pub async fn get_rune_pool_history(
     db: Data<Database>,
