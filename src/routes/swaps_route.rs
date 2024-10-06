@@ -23,13 +23,41 @@ pub async fn get_pool_swap_history(
     db: Data<Database>,
     query: Query<SwapHistoryQueryParams>,
 ) -> HttpResponse {
+    if let (Some(start), Some(end)) = (query.start_time, query.end_time) {
+        if start >= end {
+            return HttpResponse::BadRequest().body("start_time must be less than end_time.");
+        }
+    }
+
     let limit = query.limit.unwrap_or(10).clamp(1, 100);
+    if limit < 1 {
+        return HttpResponse::BadRequest().body("limit must be a positive integer.");
+    }
+
     let page = query.page.unwrap_or(1).max(1);
+    if page < 1 {
+        return HttpResponse::BadRequest().body("page must be a positive integer.");
+    }
+
     let sort_order = match query.order.as_deref() {
         Some("asc") => 1,
         Some("desc") => -1,
         _ => 1,
     };
+
+    let valid_ordering = vec!["asc", "desc"];
+    if let Some(ref order) = query.order {
+        if !valid_ordering.contains(&order.as_str()) {
+            return HttpResponse::BadRequest().body(format!("order must be one of: {:?}", valid_ordering));
+        }
+    }
+
+    let valid_interval = vec!["hour", "day", "week", "month", "quarter", "year"];
+    if let Some(ref interval) = query.interval {
+        if !valid_interval.contains(&interval.as_str()) {
+            return HttpResponse::BadRequest().body(format!("interval must be one of: {:?}", valid_interval));
+        }
+    }
 
     match db
         .get_pool_swap_history(
