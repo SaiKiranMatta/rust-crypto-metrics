@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
             .service(fetch_and_store_rune_pool)
             .service(run_all_jobs)
             .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
+                SwaggerUi::new("/docs/{_:.*}")
                     .url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
 

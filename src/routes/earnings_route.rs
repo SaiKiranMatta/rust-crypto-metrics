@@ -5,20 +5,52 @@ use actix_web::{
     HttpResponse,
 };
 use serde::Deserialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct EarningsQueryParams {
+    #[schema(example = 1653373410)]
     pub start_time: Option<i64>,
+    #[schema(example = 1666592610)]
     pub end_time: Option<i64>,
+    #[schema(example = "BTC.BTC")]
     pub pool: Option<String>,
+    #[schema(example = 1, minimum = 1)]
     pub page: Option<u32>,
+    #[schema(example = 10, minimum = 1, maximum = 100)]
     pub limit: Option<u32>,
+    #[schema(example = "asset_earnings")]
     pub sort_by: Option<String>,
+    #[schema(example = "asc")]
     pub order: Option<String>,
+    #[schema(example = "day")]
     pub interval: Option<String>,
+    #[schema(example = false)]
     pub summary: Option<bool>,
 }
 
+/// Get pool earnings information
+#[utoipa::path(
+    get,
+    path = "/earnings",
+    params(
+        ("start_time" = Option<i64>, Query, description = "Start time Unix timestamp"),
+        ("end_time" = Option<i64>, Query, description = "End time Unix timestamp"),
+        ("pool" = Option<String>, Query, description = "Pool identifier"),
+        ("page" = Option<u32>, Query, description = "Page number (minimum: 1)"),
+        ("limit" = Option<u32>, Query, description = "Items per page (1-100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("order" = Option<String>, Query, description = "Sort order (asc or desc)"),
+        ("interval" = Option<String>, Query, description = "Time interval for aggregation (hour, day, week, month, quarter, year)"),
+        ("summary" = Option<bool>, Query, description = "Whether to include summary in response")
+    ),
+    responses(
+        (status = 200, description = "List of pool earnings", body = Vec<EarningsResponse>),
+        (status = 400, description = "Bad request - Invalid parameters"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "Earnings History"
+)]
 #[get("/earnings")]
 pub async fn get_pool_earnings_api(
     db: Data<Database>,
