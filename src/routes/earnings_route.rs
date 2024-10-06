@@ -53,6 +53,13 @@ pub async fn get_pool_earnings_api(
         }
     }
 
+    let valid_interval = vec!["hour", "day", "week", "month", "quarter", "year"];
+    if let Some(ref interval) = query.interval {
+        if !valid_interval.contains(&interval.as_str()) {
+            return HttpResponse::BadRequest().body(format!("interval must be one of: {:?}", valid_interval));
+        }
+    }
+
     let include_summary = query.summary.unwrap_or(false);
 
     match db
