@@ -19,7 +19,7 @@ pub struct EarningsQueryParams {
     pub page: Option<u32>,
     #[schema(example = 10, minimum = 1, maximum = 100)]
     pub limit: Option<u32>,
-    #[schema(example = "asset_earnings")]
+    #[schema(example = "saver_earning")]
     pub sort_by: Option<String>,
     #[schema(example = "asc")]
     pub order: Option<String>,

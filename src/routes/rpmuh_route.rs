@@ -16,7 +16,7 @@ pub struct RunePoolHistoryQueryParams {
     pub page: Option<u32>,
     #[schema(example = 10, minimum = 1, maximum = 100)]
     pub limit: Option<u32>,
-    #[schema(example = "asset_price")]
+    #[schema(example = "units")]
     pub sort_by: Option<String>,
     #[schema(example = "asc")]
     pub order: Option<String>,
@@ -27,7 +27,7 @@ pub struct RunePoolHistoryQueryParams {
 /// Get rune pool members and units history
 #[utoipa::path(
     get,
-    path = "/rune_pool_history",
+    path = "/runepool",
     params(
         ("start_time" = Option<i64>, Query, description = "Start time Unix timestamp"),
         ("end_time" = Option<i64>, Query, description = "End time Unix timestamp"),
@@ -44,7 +44,7 @@ pub struct RunePoolHistoryQueryParams {
     ),
     tag = "Rune Pool History"
 )]
-#[get("/rune_pool_history")]
+#[get("/runepool")]
 pub async fn get_rune_pool_history(
     db: Data<Database>,
     query: Query<RunePoolHistoryQueryParams>,
