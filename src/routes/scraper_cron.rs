@@ -27,7 +27,7 @@ pub async fn run_all_jobs(
     let interval = "hour".to_string();
 
     if params.secret != expected_secret {
-        return HttpResponse::Unauthorized().body("Wrong secret key.");
+        return HttpResponse::Unauthorized().body("No");
     }
 
     let current_time = Utc::now().timestamp();
@@ -63,9 +63,9 @@ pub async fn run_all_jobs(
 
     for result in results {
         if result.is_err() {
-            return HttpResponse::InternalServerError().body("One or more jobs failed.");
+            return HttpResponse::InternalServerError().body("no");
         }
     }
 
-    HttpResponse::Ok().body("All jobs executed successfully.")
+    HttpResponse::Ok().body("Ok")
 }
