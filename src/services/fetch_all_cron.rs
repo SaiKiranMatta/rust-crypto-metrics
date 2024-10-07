@@ -7,7 +7,7 @@ use dotenv::dotenv;
 pub async fn run_cron_job(db: Data<Database>, pool: String) {
     dotenv().ok();
     
-    let mut interval = interval(Duration::from_secs(100)); // 1 hour interval
+    let mut interval = interval(Duration::from_secs(3600)); // 1 hour interval
     
     loop {
         interval.tick().await; // Wait for the next tick
