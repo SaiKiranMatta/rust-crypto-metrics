@@ -6,6 +6,7 @@ use actix_web::{
 };
 use serde::Deserialize;
 
+
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RunePoolHistoryQueryParams {
     #[schema(example = 1653373410)]
@@ -24,6 +25,26 @@ pub struct RunePoolHistoryQueryParams {
     pub interval: Option<String>,
 }
 
+
+#[derive(utoipa::ToSchema)]
+pub struct RunePoolHistoryResponse {
+    /// Start time of the pool history period (UNIX timestamp)
+    #[schema(example = 1728198000)]
+    pub start_time: i64,
+
+    /// End time of the pool history period (UNIX timestamp)
+    #[schema(example = 1728201600)]
+    pub end_time: i64,
+
+    /// The count of transactions in the pool
+    #[schema(example = 360.0)]
+    pub count: f64,
+
+    /// The total pool units
+    #[schema(example = 373060894407873.0)]
+    pub units: f64,
+}
+
 /// Get rune pool members and units history
 #[utoipa::path(
     get,
@@ -38,7 +59,7 @@ pub struct RunePoolHistoryQueryParams {
         ("interval" = Option<String>, Query, description = "Time interval for aggregation (hour, day, week, month, quarter, year)")
     ),
     responses(
-        (status = 200, description = "List of rune pool history", body = Vec<RunePoolHistoryQueryParams>),
+        (status = 200, description = "List of rune pool history", body = Vec<RunePoolHistoryResponse>),
         (status = 400, description = "Bad request - Invalid parameters"),
         (status = 500, description = "Internal server error")
     ),

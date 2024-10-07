@@ -29,6 +29,63 @@ pub struct EarningsQueryParams {
     pub summary: Option<bool>,
 }
 
+#[derive(utoipa::ToSchema)]
+#[allow(dead_code)]
+pub struct PoolEarningsResponse {
+    /// Fees earned from asset liquidity
+    #[schema(example = 123456.78)]
+    pub asset_liquidity_fees: f64,         
+    
+    /// Fees earned from Rune liquidity
+    #[schema(example = 98765.43)]
+    pub rune_liquidity_fees: f64,          
+    
+    /// Total liquidity fees in Rune
+    #[schema(example = 12345.67)]
+    pub total_liquidity_fees_rune: f64,    
+    
+    /// Earnings from savers
+    #[schema(example = 65432.10)]
+    pub saver_earning: f64,                 
+    
+    /// Total rewards earned
+    #[schema(example = 43210.98)]
+    pub rewards: f64, 
+    
+    /// Start time of the earnings period (UNIX timestamp)
+    #[schema(example = 1653373410)]
+    pub start_time: i64,               
+    
+    /// End time of the earnings period (UNIX timestamp)
+    #[schema(example = 1666592610)]
+    pub end_time: i64,                     
+    
+    /// Block rewards earned
+    #[schema(example = 1234.56)]
+    pub block_rewards: f64,            
+    
+    /// Average node count during the period
+    #[schema(example = 50.0)]
+    pub avg_node_count: f64,           
+    
+    /// Earnings from bonding
+    #[schema(example = 7890.12)]
+    pub bonding_earnings: f64,         
+    
+    /// Earnings from liquidity pools
+    #[schema(example = 4567.89)]
+    pub liquidity_earnings: f64,       
+    
+    /// Total liquidity fees earned
+    #[schema(example = 123456.78)]
+    pub liquidity_fees: f64,           
+    
+    /// Price of Rune in USD
+    #[schema(example = 8.99)]
+    pub rune_price_usd: f64
+}
+
+
 /// Get pool earnings information
 #[utoipa::path(
     get,
@@ -45,7 +102,7 @@ pub struct EarningsQueryParams {
         ("summary" = Option<bool>, Query, description = "Whether to include summary in response")
     ),
     responses(
-        (status = 200, description = "List of pool earnings", body = Vec<EarningsResponse>),
+        (status = 200, description = "List of pool earnings", body = Vec<PoolEarningsResponse>),
         (status = 400, description = "Bad request - Invalid parameters"),
         (status = 500, description = "Internal server error")
     ),

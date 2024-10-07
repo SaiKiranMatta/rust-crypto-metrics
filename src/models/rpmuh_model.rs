@@ -7,16 +7,16 @@ pub struct RunePoolHistory {
     pub _id: ObjectId,
     pub start_time: i64,
     pub end_time: i64,
-    pub count: i64,
-    pub units: i64,
+    pub count: f64,
+    pub units: f64,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct RunePoolHistoryRequest {
     pub start_time: i64,
     pub end_time: i64,
-    pub count: i64,
-    pub units: i64,
+    pub count: f64,
+    pub units: f64,
 }
 
 impl TryFrom<RunePoolHistoryRequest> for RunePoolHistory {

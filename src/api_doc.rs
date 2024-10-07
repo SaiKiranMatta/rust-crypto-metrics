@@ -10,10 +10,14 @@ use utoipa::OpenApi;
     ),
     components(
         schemas(
-            crate::routes::depth_route::DepthHistoryQueryParams, 
+            crate::routes::depth_route::DepthHistoryQueryParams,
+            crate::routes::depth_route::PoolDepthPriceHistoryResponse, 
             crate::routes::earnings_route::EarningsQueryParams,
+            crate::routes::earnings_route::PoolEarningsResponse,
             crate::routes::rpmuh_route::RunePoolHistoryQueryParams,
-            crate::routes::swaps_route::SwapHistoryQueryParams
+            crate::routes::rpmuh_route::RunePoolHistoryResponse,
+            crate::routes::swaps_route::SwapHistoryQueryParams,
+            crate::routes::swaps_route::PoolSwapHistoryResponse
             )
     ),
     tags(

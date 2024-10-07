@@ -5,6 +5,8 @@ use actix_web::{
     HttpResponse,
 };
 use serde::Deserialize;
+use utoipa::openapi::schema;
+
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct DepthHistoryQueryParams {
@@ -26,6 +28,63 @@ pub struct DepthHistoryQueryParams {
     pub interval: Option<String>,
 }
 
+#[derive(utoipa::ToSchema)]
+#[allow(dead_code)]
+pub struct PoolDepthPriceHistoryResponse {
+    /// The identifier of the pool (e.g., "BTC.BTC")
+    #[schema(example= "BTC.BTC")]
+    pub pool: String, 
+
+    /// Depth of the asset in the pool
+    #[schema(example = 123456.78)]
+    pub asset_depth: f64,
+
+    /// Price of the asset in the pool's base currency
+    #[schema(example = 42.50)]
+    pub asset_price: f64,
+
+    /// Price of the asset in USD
+    #[schema(example = 60000.99)]
+    pub asset_price_usd: f64,
+
+    /// Start time of the price history period (UNIX timestamp)
+    #[schema(example = 1653373410)]
+    pub start_time: Option<i64>,
+
+    /// End time of the price history period (UNIX timestamp)
+    #[schema(example = 1666592610)]
+    pub end_time: Option<i64>,
+
+    /// The total liquidity units in the pool
+    #[schema(example = 100000.0)]
+    pub liquidity_units: f64,
+
+    /// Liquidity Utilization Value Indicator (LUVI)
+    #[schema(example = 1.75)]
+    pub luvi: f64,
+
+    /// Number of members (liquidity providers) in the pool
+    #[schema(example = 250)]
+    pub members_count: i64,
+
+    /// The amount of Rune in the pool
+    #[schema(example = 987654.32)]
+    pub rune_depth: f64,
+
+    /// The total supply of synth assets in the pool
+    #[schema(example = 5678.90)]
+    pub synth_supply: f64,
+
+    /// The number of synthetic asset units in the pool
+    #[schema(example = 1234.56)]
+    pub synth_units: f64,
+
+    /// Total number of units in the pool
+    #[schema(example = 999999.99)]
+    pub units: f64,
+}
+
+
 /// Get pool depth price history
 #[utoipa::path(
     get,
@@ -41,7 +100,7 @@ pub struct DepthHistoryQueryParams {
         ("interval" = Option<String>, Query, description = "Time interval for aggregation (hour, day, week, month, quarter, year)")
     ),
     responses(
-        (status = 200, description = "List of pool depth price history", body = Vec<HistoryQueryParams>),
+        (status = 200, description = "List of pool depth price history", body = Vec<PoolDepthPriceHistoryResponse>),
         (status = 400, description = "Bad request - Invalid parameters"),
         (status = 500, description = "Internal server error")
     ),

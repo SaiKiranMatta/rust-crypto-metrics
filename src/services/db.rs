@@ -442,7 +442,7 @@ impl Database {
         let sort_doc = sort_by.map(|field| {
             let order = if sort_order == 1 { 1 } else { -1 };
             doc! { field: order }
-        }).unwrap_or_else(|| doc! {});
+        }).unwrap_or_else(|| doc! { "end_time": -1 }); 
     
         let interval_unit = interval.as_deref().unwrap_or("hour");
     
@@ -608,7 +608,7 @@ impl Database {
         let sort_doc = sort_by.map(|field| {
             let order = if sort_order == 1 { 1 } else { -1 };
             doc! { field: order }
-        }).unwrap_or_else(|| doc! {});
+        }).unwrap_or_else(|| doc! { "end_time": -1 }); 
     
         let interval_unit = interval.as_deref().unwrap_or("hour");
     

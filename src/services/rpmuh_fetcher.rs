@@ -42,8 +42,8 @@ pub async fn fetch_and_store_rune_pool_history(db: &Database, interval: &String,
             let rune_pool_interval_request = RunePoolHistoryRequest {
                 start_time: interval_data.startTime.parse::<i64>().expect("Failed to parse startTime"),
                 end_time: interval_data.endTime.parse::<i64>().expect("Failed to parse endTime"),
-                units: interval_data.units.parse::<i64>().expect("Failed to parse units"),
-                count: interval_data.count.parse::<i64>().expect("Failed to parse count"),
+                units: interval_data.units.parse::<f64>().expect("Failed to parse units"),
+                count: interval_data.count.parse::<f64>().expect("Failed to parse count"),
             };
 
             let rune_pool_interval = RunePoolHistory::try_from(rune_pool_interval_request).unwrap();
