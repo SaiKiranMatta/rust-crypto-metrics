@@ -5,7 +5,6 @@ use actix_web::{
     HttpResponse,
 };
 use serde::Deserialize;
-use utoipa::openapi::schema;
 
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]

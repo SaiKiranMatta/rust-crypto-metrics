@@ -17,7 +17,7 @@ use routes::rune_pool_scraper::fetch_and_store_rune_pool;
 use routes::scraper_cron::run_all_jobs;
 use routes::swaps_route::get_pool_swap_history;
 use routes::swaps_scraper::fetch_and_store_swaps;
-use services::db::Database;
+use services::{db::Database, fetch_all_cron::run_cron_job};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -30,6 +30,7 @@ async fn hello() -> impl Responder {
 async fn main() -> std::io::Result<()> {
     let db = Database::init().await;
     let db_data = Data::new(db);
+    actix_web::rt::spawn(run_cron_job(db_data.clone(), "BTC.BTC".to_string()));
     HttpServer::new(move || {
         App::new()
             .app_data(db_data.clone())
