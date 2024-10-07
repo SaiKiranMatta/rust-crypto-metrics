@@ -28,6 +28,7 @@ pub struct SwapHistoryQueryParams {
 }
 
 #[derive(utoipa::ToSchema)]
+#[allow(dead_code)]
 pub struct PoolSwapHistoryResponse {
     /// The pool identifier (e.g., "BTC.BTC")
     #[schema(example = "BTC.BTC")]

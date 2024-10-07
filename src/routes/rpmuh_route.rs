@@ -27,6 +27,7 @@ pub struct RunePoolHistoryQueryParams {
 
 
 #[derive(utoipa::ToSchema)]
+#[allow(dead_code)]
 pub struct RunePoolHistoryResponse {
     /// Start time of the pool history period (UNIX timestamp)
     #[schema(example = 1728198000)]
