@@ -20,6 +20,7 @@ use routes::swaps_scraper::fetch_and_store_swaps;
 use services::db::Database;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use actix_files::Files;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -30,6 +31,7 @@ async fn hello() -> impl Responder {
 async fn main() -> std::io::Result<()> {
     let db = Database::init().await;
     let db_data = Data::new(db);
+    actix_web::rt::spawn(run_cron_job(db_data.clone(), "BTC.BTC".to_string()));
     HttpServer::new(move || {
         App::new()
             .app_data(db_data.clone())
@@ -47,7 +49,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}")
                     .url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
-
+            .service(Files::new("/redoc", "./src/static").index_file("index.html"))
     })
     .bind(("0.0.0.0", 5001))?
     .run()
