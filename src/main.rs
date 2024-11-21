@@ -20,6 +20,7 @@ use routes::swaps_scraper::fetch_and_store_swaps;
 use services::{db::Database, fetch_all_cron::run_cron_job};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use actix_files::Files;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -48,7 +49,7 @@ async fn main() -> std::io::Result<()> {
                 SwaggerUi::new("/docs/{_:.*}")
                     .url("/api-docs/openapi.json", ApiDoc::openapi()),
             )
-
+            .service(Files::new("/redoc", "./src/static").index_file("index.html"))
     })
     .bind(("0.0.0.0", 5001))?
     .run()
